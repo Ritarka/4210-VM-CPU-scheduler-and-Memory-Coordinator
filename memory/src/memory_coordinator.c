@@ -64,5 +64,85 @@ COMPLETE THE IMPLEMENTATION
 */
 void MemoryScheduler(virConnectPtr conn, int interval)
 {
-	
+	virDomainPtr* domains;
+
+	unsigned int conn_flags = VIR_CONNECT_LIST_DOMAINS_RUNNING;
+
+	int num_domains = virConnectListAllDomains(conn, &domains, conn_flags);
+
+	static int first = 1;
+	static double* unused_arr;
+	static int* baseline;
+
+	if (first) {
+		first = 0;
+		unused_arr = (double*)calloc(num_domains, sizeof(double));
+		baseline = (int*)calloc(num_domains, sizeof(int));
+	}
+
+
+	for (int i = 0; i < num_domains; i++) {
+		virDomainSetMemoryStatsPeriod(domains[i], interval, VIR_DOMAIN_AFFECT_LIVE);
+
+		virDomainMemoryStatPtr stats = (virDomainMemoryStatPtr)calloc(VIR_DOMAIN_MEMORY_STAT_NR, sizeof(virDomainMemoryStatStruct));
+
+		virDomainMemoryStats(domains[i], stats, 10, 0);
+
+		double usuable, available, unused, balloon, rss = 0;
+		for (int j = 0; j < VIR_DOMAIN_MEMORY_STAT_NR; j++) {
+			// printf("%d, %d %lld\n", i, stats[i].tag, stats[i].val);
+			if (stats[j].tag == VIR_DOMAIN_MEMORY_STAT_UNUSED)
+				unused = stats[j].val / (double)1024;
+			else if (stats[j].tag == VIR_DOMAIN_MEMORY_STAT_AVAILABLE)
+				available = stats[j].val / (double)1024;
+			else if (stats[j].tag == VIR_DOMAIN_MEMORY_STAT_USABLE)
+				usuable = stats[j].val / (double)1024;
+			else if (stats[j].tag == VIR_DOMAIN_MEMORY_STAT_ACTUAL_BALLOON)
+				balloon = stats[j].val / (double)1024;
+			else if (stats[j].tag == VIR_DOMAIN_MEMORY_STAT_RSS)
+				rss = stats[j].val / (double)1024;
+		}
+
+		// printf("[%d] Unused: %.2f available: %.2f usable: %.2f balloon: %.2f rss: %.2f\n", i, unused, available, usuable, balloon, rss);
+		// printf("[%d] Total: %.2lf\n", i, unused + available + usuable + balloon + rss);
+
+		printf("[%d] Actual [%.2f], Unused: [%.2f]\n", i, balloon, unused);
+
+		// unsigned long max = virDomainGetMaxMemory(domains[i]) >> 10;
+		// printf("Max: %ld\n", max);
+
+		if (!baseline[i]) {
+			unused_arr[i] = unused;
+			baseline[i] = 1;
+		}
+
+		int new_val = unused;
+
+		// // we must shrink
+		if (new_val - unused_arr[i] > 100) {
+			unsigned long new_size = balloon - 100;
+			if (new_size < 200)
+				new_size = 200;
+
+			virDomainSetMemory(domains[i], new_size << 10);
+			printf("\t Shrink new memory: %ld\n", new_size);
+			baseline[i] = new_val;
+		}
+
+		// // we must grow
+		if (unused_arr[i] - new_val > 100) {
+			unsigned long new_size = balloon + 100;
+			if (new_size > 2048)
+				new_size = 2048;
+
+			virDomainSetMemory(domains[i], new_size << 10);
+			printf("\t Grow new memory: %ld\n", new_size);
+			baseline[i] = new_val;
+		}
+
+
+		free(stats);
+	}
+
+	return ;
 }

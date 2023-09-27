@@ -14,3 +14,4 @@
 4. Host should not release memory if it has less than or equal to 200MB of unused memory.
 5. While submitting, write your algorithm and logic in this Readme.
 
+With the memory co-ordinator, at the beginning and whenever we change the allocated memory of a vm, we first obtain a baseline measurement of their unused memory usage. If the vcpu's unused memory goes 100 below the baseline, we increase their allocated memory and in the next iteration, we take a baseline. Similarly, if the vcpu's unused memory goes 100 over the baseline, we reduce their memory and in the next iteration, we take another baseline. This way of establishing a baseline allows us to ensure we do not starve/overfeed a VM, allowing us to monitor it's own behavior almost independent of our actions to their memory

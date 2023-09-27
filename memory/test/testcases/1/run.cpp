@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#define PAGE_SIZE 1024 * 4
+#define PAGE_SIZE 1024 * 1024 * 32
 #define TIME_SLEEP 100
 
 int main()

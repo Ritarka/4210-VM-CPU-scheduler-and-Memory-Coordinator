@@ -1,0 +1,8 @@
+Script started on 2023-09-08 14:15:31+00:00 [TERM="xterm-256color" TTY="/dev/pts/1" COLUMNS="72" LINES="15"]
+To run a command as administrator (user "root"), use "sudo <command>".
+See "man sudo_root" for details.
+
+vagrant@vagrant:~$ exit
+exit
+
+Script done on 2023-09-08 15:42:45+00:00 [COMMAND_EXIT_CODE="0"]
